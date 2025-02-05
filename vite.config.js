@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/ozero/',  // Замініть на назву вашого репозиторію
+  base: '/ozero',  // Repository name for github pages
   plugins: [react()],
   resolve: {
     alias: {

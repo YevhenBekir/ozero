@@ -13,15 +13,18 @@ import RegisterForm from './components/auth/RegisterForm';
 import SuccessfulMircha from './components/SuccessfulMircha';
 
 function App() {
+  // Визначаємо базовий шлях для GitHub Pages
+  const basePath = '/ozero';
+
   return (
-    <Router>
+    <Router basename={basePath}>
       <AuthProvider>
         <Routes>
           {/* Публічні маршрути */}
           <Route path="/login" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
 
-          {/* Приватні маршрути */}
+          {/* Головний маршрут */}
           <Route
             path="/"
             element={
@@ -35,9 +38,6 @@ function App() {
 
           {/* Маршрут 404 */}
           <Route path="*" element={<NotFound />} />
-
-          {/* Перенаправлення на логін */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>
     </Router>
