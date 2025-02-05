@@ -1,64 +1,182 @@
 // src/components/common/FloatingActions.jsx
-import React, { useState } from "react";
-import { Plus, Save, Download, Share2, HelpCircle } from "lucide-react";
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Save, BookOpen, Award, HelpCircle, X } from 'lucide-react';
+import AchievementsModal from '../modals/AchievementsModal';
+import StoriesModal from '../modals/StoriesModal';
 
-export const FloatingActions = ({ onSave, onExport, onShare, onHelp }) => {
+export const FloatingActions = ({
+  onSave,
+  onHelp,
+  stories,
+  achievements,
+  unlockedAchievements,
+  totalPoints,
+  progress,
+  onDeleteStory,
+  onLoadStory,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showStoriesModal, setShowStoriesModal] = useState(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
 
-  const toggleOpen = () => setIsOpen(!isOpen);
+  const actions = [
+    {
+      icon: HelpCircle,
+      label: 'Допомога',
+      onClick: onHelp,
+      color: 'bg-blue-500 hover:bg-blue-600',
+      shortcut: 'Ctrl + H',
+    },
+    {
+      icon: BookOpen,
+      label: 'Історії',
+      onClick: () => setShowStoriesModal(true),
+      color: 'bg-indigo-500 hover:bg-indigo-600',
+    },
+    {
+      icon: Award,
+      label: 'Досягнення',
+      onClick: () => setShowAchievementsModal(true),
+      color: 'bg-pink-500 hover:bg-pink-600',
+    },
+    {
+      icon: Save,
+      label: 'Зберегти',
+      onClick: onSave,
+      color: 'bg-purple-500 hover:bg-purple-600',
+      shortcut: 'Ctrl + S',
+    },
+  ];
+
+  const containerVariants = {
+    open: {
+      transition: {
+        staggerChildren: 0.05,
+        delayChildren: 0.1,
+      },
+    },
+    closed: {
+      transition: {
+        staggerChildren: 0.05,
+        staggerDirection: -1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    open: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 300,
+        damping: 24,
+      },
+    },
+    closed: {
+      y: 50,
+      opacity: 0,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
 
   return (
-    <div className="fixed bottom-4 right-4 z-40">
-      {/* Спливаючі кнопки */}
-      <div
-        className={`space-y-2 mb-2 transition-all duration-200 ${
-          isOpen
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-10 pointer-events-none"
-        }`}
-      >
-        <button
-          onClick={onHelp}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600"
-          title="Допомога (Ctrl + H)"
-        >
-          <HelpCircle className="w-5 h-5" />
-        </button>
+    <>
+      <div className="fixed bottom-4 right-4 z-40">
+        {/* Floating Actions */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial="closed"
+              animate="open"
+              exit="closed"
+              variants={containerVariants}
+              className="absolute bottom-16 right-0 space-y-2"
+            >
+              {actions.map((action) => (
+                <motion.div
+                  key={action.label}
+                  variants={itemVariants}
+                  className="relative group"
+                >
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      action.onClick();
+                      if (!action.keepOpen) setIsOpen(false);
+                    }}
+                    className={`flex items-center justify-center w-12 h-12 rounded-full text-white shadow-lg
+                             ${action.color} transition-colors duration-200`}
+                  >
+                    <action.icon className="w-5 h-5" />
+                  </motion.button>
 
-        <button
-          onClick={onShare}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600"
-          title="Поділитися"
-        >
-          <Share2 className="w-5 h-5" />
-        </button>
+                  {/* Tooltip */}
+                  <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div
+                      className="bg-gray-900 text-white text-sm px-2 py-1 rounded whitespace-nowrap
+                                opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      {action.label}
+                      {action.shortcut && (
+                        <span className="ml-2 opacity-75 text-xs">
+                          ({action.shortcut})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <button
-          onClick={onExport}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500 text-white shadow-lg hover:bg-yellow-600"
-          title="Експортувати (Ctrl + E)"
+        {/* Main Button */}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center justify-center w-14 h-14 rounded-full bg-yellow-500 
+                   text-white shadow-lg hover:bg-yellow-600 transition-colors duration-200"
         >
-          <Download className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={onSave}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-500 text-white shadow-lg hover:bg-purple-600"
-          title="Зберегти (Ctrl + S)"
-        >
-          <Save className="w-5 h-5" />
-        </button>
+          <motion.div
+            animate={{ rotate: isOpen ? 45 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+          </motion.div>
+        </motion.button>
       </div>
 
-      {/* Головна кнопка */}
-      <button
-        onClick={toggleOpen}
-        className={`flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500 text-white shadow-lg hover:bg-yellow-600 transition-transform duration-200 ${
-          isOpen ? "rotate-45" : ""
-        }`}
-      >
-        <Plus className="w-6 h-6" />
-      </button>
-    </div>
+      {/* Modals */}
+      <AnimatePresence>
+        {showStoriesModal && (
+          <StoriesModal
+            isOpen={showStoriesModal}
+            onClose={() => setShowStoriesModal(false)}
+            stories={stories}
+            onDelete={onDeleteStory}
+            onLoad={onLoadStory}
+          />
+        )}
+
+        {showAchievementsModal && (
+          <AchievementsModal
+            isOpen={showAchievementsModal}
+            onClose={() => setShowAchievementsModal(false)}
+            achievements={achievements}
+            unlockedAchievements={unlockedAchievements}
+            totalPoints={totalPoints}
+            progress={progress}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
+
+export default FloatingActions;

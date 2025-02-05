@@ -1,9 +1,9 @@
 // src/components/layout/NotFound.jsx
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Home } from 'lucide-react';
 
-export const NotFound = () => {
+const NotFound = () => {
   const navigate = useNavigate();
 
   return (
@@ -17,7 +17,7 @@ export const NotFound = () => {
           Вибачте, але сторінка, яку ви шукаєте, не існує.
         </p>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate('/')}
           className="inline-flex items-center px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
         >
           <Home className="w-5 h-5 mr-2" />
@@ -27,3 +27,5 @@ export const NotFound = () => {
     </div>
   );
 };
+
+export default NotFound;

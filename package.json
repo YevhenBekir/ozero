@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/node": "^20.11.16",
     "autoprefixer": "^10.4.17",
+    "framer-motion": "^12.1.0",
     "lucide-react": "^0.323.0",
     "postcss": "^8.4.35",
     "react": "^18.2.0",

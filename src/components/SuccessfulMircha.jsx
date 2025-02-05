@@ -1,33 +1,32 @@
 // src/components/SuccessfulMircha.jsx
-import React, { useState, useMemo, useCallback } from 'react';
-import { Crown, Save, Share2, Download } from 'lucide-react';
 
-// Імпорт компонентів
-import { ProgressBar } from '@/components/common/ProgressBar';
-import { ProgressStats } from '@/components/common/ProgressStats';
-import { AiSuggestions } from '@/components/features/AiSuggestions';
-import { StoriesManager } from '@/components/features/StoriesManager';
-import { Analytics } from '@/components/features/Analytics';
-import { Achievements } from '@/components/features/Achievements';
-import { TemplateSelector } from '@/components/features/TemplateSelector';
-import { ShareExportPanel } from '@/components/features/ShareExportPanel';
-import { FloatingActions } from '@/components/common/FloatingActions';
-import { Notifications } from '@/components/common/Notifications';
-import { KeyboardHelp } from '@/components/common/KeyboardHelp';
+import React, { useState, useMemo } from 'react';
+import { Crown, Save } from 'lucide-react';
 
-// Імпорт хуків
+// Components
+import { StoriesModal } from './modals/StoriesModal';
+import { AchievementsModal } from './modals/AchievementsModal';
+import { ExportModal } from './modals/ExportModal';
+import { ProgressBar } from './common/ProgressBar';
+import { ProgressStats } from './common/ProgressStats';
+import { AiSuggestions } from './features/AiSuggestions';
+import { Analytics } from './features/Analytics';
+import { FloatingActions } from './common/FloatingActions';
+import { Notifications } from './common/Notifications';
+import { KeyboardHelp } from './common/KeyboardHelp';
+
+// Hooks
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useSentimentAnalysis } from '@/hooks/useSentimentAnalysis';
 import { useProgress } from '@/hooks/useProgress';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAchievements } from '@/hooks/useAchievements';
-import { useTemplates } from '@/hooks/useTemplates';
-import { useShareExport } from '@/hooks/useShareExport';
 import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useExport } from '@/hooks/useExport';
 
-// Конфігурація полів форми
+// Field configuration
 const FORM_FIELDS = {
   situation: {
     id: 'situation',
@@ -56,12 +55,14 @@ const FORM_FIELDS = {
 };
 
 const SuccessfulMircha = () => {
-  // Базові стани
+  // Base states
   const [currentField, setCurrentField] = useState(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
+  const [showStoriesModal, setShowStoriesModal] = useState(false);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
-  // Хуки для роботи з даними
+  // Hooks
   const {
     story,
     updateStory,
@@ -73,23 +74,20 @@ const SuccessfulMircha = () => {
 
   const { notifications, addNotification, removeNotification } =
     useNotifications();
-  const { templates } = useTemplates();
-  const { exportStory, shareStory } = useShareExport(story);
-
-  // Аналіз та прогрес
+  const { exportStory, isExporting, error: exportError } = useExport(story);
   const progress = useProgress(story);
   const { sentiment } = useSentimentAnalysis(story[currentField]);
   const { metrics, patterns } = useAnalytics(story, savedStories);
 
-  // Досягнення
+  // Achievements
   const {
     unlockedAchievements,
     totalPoints,
-    newAchievement,
-    clearNewAchievement,
+    allAchievements,
+    progress: achievementsProgress,
   } = useAchievements(savedStories, patterns);
 
-  // AI підказки
+  // AI suggestions
   const suggestionContext = useMemo(
     () => ({
       sentiment,
@@ -105,83 +103,75 @@ const SuccessfulMircha = () => {
     suggestionContext
   );
 
-  // Обробники подій
-  const handleFieldChange = useCallback(
-    (field, value) => {
-      updateStory({ [field]: value });
-    },
-    [updateStory]
-  );
+  // Handlers
+  const handleFieldChange = (field, value) => {
+    updateStory({ [field]: value });
+  };
 
-  const handleFieldFocus = useCallback((field) => {
+  const handleFieldFocus = (field) => {
     setCurrentField(field);
-  }, []);
+  };
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     await saveStory();
     addNotification({
       type: 'success',
       title: 'Збережено',
       message: 'Ваша історія успішно збережена',
     });
-  }, [saveStory, addNotification]);
+  };
 
-  const handleShare = useCallback(async () => {
-    const success = await shareStory();
+  const handleExport = async (format, options) => {
+    const success = await exportStory(format, options);
     if (success) {
       addNotification({
         type: 'success',
-        title: 'Поділились',
-        message: 'Історію успішно скопійовано до буферу обміну',
+        title: 'Експортовано',
+        message: `Історію успішно експортовано у форматі ${format.toUpperCase()}`,
+      });
+    } else if (exportError) {
+      addNotification({
+        type: 'error',
+        title: 'Помилка експорту',
+        message: exportError,
       });
     }
-  }, [shareStory, addNotification]);
+    return success;
+  };
 
-  const handleExport = useCallback(async () => {
-    await exportStory('txt');
-    addNotification({
-      type: 'success',
-      title: 'Експортовано',
-      message: 'Історію успішно експортовано',
-    });
-  }, [exportStory, addNotification]);
-
-  // Клавіатурні скорочення
-  useKeyboardShortcuts(
-    useMemo(
-      () => ({
-        onSave: handleSave,
-        onExport: handleExport,
-        onHelp: () => setIsHelpOpen((prev) => !prev),
-        onEscape: () => {
-          setIsHelpOpen(false);
-          setIsTemplateOpen(false);
-        },
-      }),
-      [handleSave, handleExport]
-    )
-  );
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onSave: handleSave,
+    onHelp: () => setIsHelpOpen(true),
+    onEscape: () => {
+      setIsHelpOpen(false);
+      setShowStoriesModal(false);
+      setShowAchievementsModal(false);
+      setShowExportModal(false);
+    },
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Шапка */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
+            <h1 className="text-3xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
               <Crown className="w-8 h-8 text-yellow-500" />
               Твій Шлях до Перемог
             </h1>
 
-            <div className="flex items-center gap-4">
-              <ShareExportPanel
-                story={story}
-                onExport={handleExport}
-                onShare={handleShare}
-              />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="btn-secondary flex items-center gap-2 px-4 py-2"
+              >
+                Експорт
+              </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2"
+                className="btn-primary flex items-center gap-2 px-4 py-2"
               >
                 <Save className="w-5 h-5" />
                 Зберегти
@@ -192,7 +182,7 @@ const SuccessfulMircha = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Прогрес */}
+        {/* Progress */}
         {progress && (
           <div className="mb-8">
             <ProgressStats progress={progress} />
@@ -200,22 +190,29 @@ const SuccessfulMircha = () => {
           </div>
         )}
 
-        {/* Основний контент */}
+        {/* Main content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Ліва колонка - форма */}
+          {/* Form */}
           <div className="lg:col-span-2 space-y-6">
             {Object.values(FORM_FIELDS).map((field) => (
-              <div key={field.id} className="bg-white rounded-lg shadow p-6">
+              <div
+                key={field.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
+              >
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-2xl">{field.icon}</span>
-                  <h2 className="text-xl font-semibold">{field.title}</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {field.title}
+                  </h2>
                 </div>
 
                 <textarea
                   value={story[field.id] || ''}
                   onChange={(e) => handleFieldChange(field.id, e.target.value)}
                   onFocus={() => handleFieldFocus(field.id)}
-                  className="w-full p-4 border border-gray-200 rounded-lg focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                  className="w-full p-4 border border-gray-200 dark:border-gray-700 rounded-lg 
+                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                           focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
                   rows="4"
                   placeholder={field.placeholder}
                 />
@@ -227,60 +224,63 @@ const SuccessfulMircha = () => {
             ))}
           </div>
 
-          {/* Права колонка */}
+          {/* Analytics */}
           <div className="space-y-6">
             {metrics && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4">Аналітика</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Аналітика
+                </h3>
                 <Analytics metrics={metrics} patterns={patterns} />
               </div>
             )}
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">Досягнення</h3>
-              <Achievements
-                unlockedAchievements={unlockedAchievements}
-                totalPoints={totalPoints}
-                newAchievement={newAchievement}
-                onNewAchievementClose={clearNewAchievement}
-              />
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold mb-4">Збережені історії</h3>
-              <StoriesManager
-                stories={savedStories}
-                onLoad={loadStory}
-                onDelete={deleteStory}
-              />
-            </div>
           </div>
         </div>
       </main>
 
-      {/* Плаваючі елементи */}
+      {/* Floating Actions */}
       <FloatingActions
         onSave={handleSave}
-        onExport={handleExport}
-        onShare={handleShare}
         onHelp={() => setIsHelpOpen(true)}
+        onShowStories={() => setShowStoriesModal(true)}
+        onShowAchievements={() => setShowAchievementsModal(true)}
+        stories={savedStories}
+        achievements={allAchievements}
+        unlockedAchievements={unlockedAchievements}
+        totalPoints={totalPoints}
+        progress={achievementsProgress}
+        onDeleteStory={deleteStory}
+        onLoadStory={loadStory}
       />
 
-      {/* Модальні вікна */}
+      {/* Modals */}
+      <StoriesModal
+        isOpen={showStoriesModal}
+        onClose={() => setShowStoriesModal(false)}
+        stories={savedStories}
+        onDelete={deleteStory}
+        onLoad={loadStory}
+      />
+
+      <AchievementsModal
+        isOpen={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        achievements={allAchievements}
+        unlockedAchievements={unlockedAchievements}
+        totalPoints={totalPoints}
+        progress={achievementsProgress}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        isExporting={isExporting}
+      />
+
       <KeyboardHelp isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
-      {isTemplateOpen && (
-        <TemplateSelector
-          templates={templates}
-          onSelect={(template) => {
-            updateStory(template);
-            setIsTemplateOpen(false);
-          }}
-          onClose={() => setIsTemplateOpen(false)}
-        />
-      )}
-
-      {/* Сповіщення */}
+      {/* Notifications */}
       <Notifications
         notifications={notifications}
         onRemove={removeNotification}
