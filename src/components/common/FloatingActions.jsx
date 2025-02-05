@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Save, BookOpen, Award, HelpCircle, X } from 'lucide-react';
-import AchievementsModal from '../modals/AchievementsModal';
-import StoriesModal from '../modals/StoriesModal';
 
 export const FloatingActions = ({
   onSave,
   onHelp,
+  onShowStories,
+  onShowAchievements,
   stories,
   achievements,
   unlockedAchievements,
@@ -17,125 +17,128 @@ export const FloatingActions = ({
   onLoadStory,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showStoriesModal, setShowStoriesModal] = useState(false);
-  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
 
-  const actions = [
-    {
-      icon: HelpCircle,
-      label: 'Допомога',
-      onClick: onHelp,
-      color: 'bg-blue-500 hover:bg-blue-600',
-      shortcut: 'Ctrl + H',
-    },
-    {
-      icon: BookOpen,
-      label: 'Історії',
-      onClick: () => setShowStoriesModal(true),
-      color: 'bg-indigo-500 hover:bg-indigo-600',
-    },
-    {
-      icon: Award,
-      label: 'Досягнення',
-      onClick: () => setShowAchievementsModal(true),
-      color: 'bg-pink-500 hover:bg-pink-600',
-    },
-    {
-      icon: Save,
-      label: 'Зберегти',
-      onClick: onSave,
-      color: 'bg-purple-500 hover:bg-purple-600',
-      shortcut: 'Ctrl + S',
-    },
-  ];
-
-  const containerVariants = {
-    open: {
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-      },
-    },
-    closed: {
-      transition: {
-        staggerChildren: 0.05,
-        staggerDirection: -1,
-      },
-    },
+  // Обробники подій
+  const handleShowStories = () => {
+    onShowStories();
+    setIsOpen(false);
   };
 
-  const itemVariants = {
-    open: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-    closed: {
-      y: 50,
-      opacity: 0,
-      transition: {
-        duration: 0.2,
-      },
-    },
+  const handleShowAchievements = () => {
+    onShowAchievements();
+    setIsOpen(false);
+  };
+
+  const handleHelp = () => {
+    onHelp();
+    setIsOpen(false);
+  };
+
+  // Анімація для кнопок
+  const buttonVariants = {
+    open: { y: 0, opacity: 1 },
+    closed: { y: 20, opacity: 0 },
+  };
+
+  // Анімація для лівої кнопки збереження
+  const quickSaveVariants = {
+    hidden: { x: -100, opacity: 0 },
+    visible: { x: 0, opacity: 1 },
+    hover: { scale: 1.1 },
+    tap: { scale: 0.9 },
   };
 
   return (
     <>
+      {/* Кнопка швидкого збереження зліва */}
+      <motion.div
+        className="fixed bottom-4 left-4 z-40"
+        variants={quickSaveVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.button
+          variants={quickSaveVariants}
+          whileHover="hover"
+          whileTap="tap"
+          onClick={onSave}
+          className="flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500 
+                   text-white shadow-lg hover:bg-yellow-600 transition-colors duration-200"
+        >
+          <Save className="w-5 h-5" />
+        </motion.button>
+      </motion.div>
+
+      {/* Основні плаваючі кнопки справа */}
       <div className="fixed bottom-4 right-4 z-40">
-        {/* Floating Actions */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
               initial="closed"
               animate="open"
               exit="closed"
-              variants={containerVariants}
+              variants={{
+                open: {
+                  transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+                },
+                closed: {
+                  transition: { staggerChildren: 0.05, staggerDirection: -1 },
+                },
+              }}
               className="absolute bottom-16 right-0 space-y-2"
             >
-              {actions.map((action) => (
-                <motion.div
-                  key={action.label}
-                  variants={itemVariants}
-                  className="relative group"
+              <motion.button
+                variants={buttonVariants}
+                onClick={handleHelp}
+                className="flex items-center justify-center w-12 h-12 rounded-full 
+                         bg-blue-500 text-white shadow-lg hover:bg-blue-600 
+                         transition-colors duration-200 group relative"
+              >
+                <HelpCircle className="w-5 h-5" />
+                <span
+                  className="absolute right-full mr-2 px-2 py-1 bg-gray-900 text-white text-sm 
+                               rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
                 >
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => {
-                      action.onClick();
-                      if (!action.keepOpen) setIsOpen(false);
-                    }}
-                    className={`flex items-center justify-center w-12 h-12 rounded-full text-white shadow-lg
-                             ${action.color} transition-colors duration-200`}
-                  >
-                    <action.icon className="w-5 h-5" />
-                  </motion.button>
+                  Допомога
+                </span>
+              </motion.button>
 
-                  {/* Tooltip */}
-                  <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <div
-                      className="bg-gray-900 text-white text-sm px-2 py-1 rounded whitespace-nowrap
-                                opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    >
-                      {action.label}
-                      {action.shortcut && (
-                        <span className="ml-2 opacity-75 text-xs">
-                          ({action.shortcut})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+              <motion.button
+                variants={buttonVariants}
+                onClick={handleShowStories}
+                className="flex items-center justify-center w-12 h-12 rounded-full 
+                         bg-indigo-500 text-white shadow-lg hover:bg-indigo-600 
+                         transition-colors duration-200 group relative"
+              >
+                <BookOpen className="w-5 h-5" />
+                <span
+                  className="absolute right-full mr-2 px-2 py-1 bg-gray-900 text-white text-sm 
+                               rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                >
+                  Історії
+                </span>
+              </motion.button>
+
+              <motion.button
+                variants={buttonVariants}
+                onClick={handleShowAchievements}
+                className="flex items-center justify-center w-12 h-12 rounded-full 
+                         bg-pink-500 text-white shadow-lg hover:bg-pink-600 
+                         transition-colors duration-200 group relative"
+              >
+                <Award className="w-5 h-5" />
+                <span
+                  className="absolute right-full mr-2 px-2 py-1 bg-gray-900 text-white text-sm 
+                               rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                >
+                  Досягнення
+                </span>
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Main Button */}
+        {/* Головна кнопка */}
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -151,30 +154,6 @@ export const FloatingActions = ({
           </motion.div>
         </motion.button>
       </div>
-
-      {/* Modals */}
-      <AnimatePresence>
-        {showStoriesModal && (
-          <StoriesModal
-            isOpen={showStoriesModal}
-            onClose={() => setShowStoriesModal(false)}
-            stories={stories}
-            onDelete={onDeleteStory}
-            onLoad={onLoadStory}
-          />
-        )}
-
-        {showAchievementsModal && (
-          <AchievementsModal
-            isOpen={showAchievementsModal}
-            onClose={() => setShowAchievementsModal(false)}
-            achievements={achievements}
-            unlockedAchievements={unlockedAchievements}
-            totalPoints={totalPoints}
-            progress={progress}
-          />
-        )}
-      </AnimatePresence>
     </>
   );
 };
