@@ -4,7 +4,7 @@ import { Trophy, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { playAchievementSound } from '@/utils/sound';
 
-export const AchievementNotification = ({ achievement, onClose }) => {
+const AchievementNotification = ({ achievement, onClose }) => {
   useEffect(() => {
     if (achievement) {
       playAchievementSound();
@@ -79,3 +79,5 @@ export const AchievementNotification = ({ achievement, onClose }) => {
     </AnimatePresence>
   );
 };
+
+export default AchievementNotification;

@@ -1,73 +1,96 @@
 // src/services/achievements.js
+
+// Ключові досягнення
 export const ACHIEVEMENTS = {
   FIRST_STORY: {
-    id: "first_story",
-    title: "Перший крок",
-    description: "Заповніть свою першу історію",
-    icon: "🎯",
+    id: 'first_story',
+    title: 'Перший крок',
+    description: 'Заповніть свою першу історію',
+    icon: '🎯',
     condition: (stats) => stats.totalStories >= 1,
     points: 10,
   },
   STORY_MASTER: {
-    id: "story_master",
-    title: "Майстер історій",
-    description: "Заповніть 10 історій",
-    icon: "📚",
+    id: 'story_master',
+    title: 'Майстер історій',
+    description: 'Заповніть 10 історій',
+    icon: '📚',
     condition: (stats) => stats.totalStories >= 10,
     points: 50,
   },
   DETAILED_WRITER: {
-    id: "detailed_writer",
-    title: "Уважний до деталей",
-    description: "Напишіть історію з більш ніж 100 словами в кожному розділі",
-    icon: "✍️",
+    id: 'detailed_writer',
+    title: 'Уважний до деталей',
+    description: 'Напишіть історію з більш ніж 100 словами в кожному розділі',
+    icon: '✍️',
     condition: (stats) => stats.hasDetailedStory,
     points: 30,
   },
   CONSISTENT_USER: {
-    id: "consistent_user",
-    title: "Постійний користувач",
-    description: "Заповнюйте історії 5 днів поспіль",
-    icon: "📅",
+    id: 'consistent_user',
+    title: 'Постійний користувач',
+    description: 'Заповнюйте історії 5 днів поспіль',
+    icon: '📅',
     condition: (stats) => stats.consecutiveDays >= 5,
     points: 40,
   },
   EMOTION_MASTER: {
-    id: "emotion_master",
-    title: "Емоційний інтелект",
-    description: "Опишіть свої емоції в 5 різних історіях",
-    icon: "❤️",
+    id: 'emotion_master',
+    title: 'Емоційний інтелект',
+    description: 'Опишіть свої емоції в 5 різних історіях',
+    icon: '❤️',
     condition: (stats) => stats.emotionalStories >= 5,
     points: 35,
   },
-  IMPROVEMENT_STAR: {
-    id: "improvement_star",
-    title: "Зірка прогресу",
-    description: "Покращіть свій результат на 50%",
-    icon: "⭐",
-    condition: (stats) => stats.improvementRate >= 50,
-    points: 45,
+  MINDFUL_WRITER: {
+    id: 'mindful_writer',
+    title: 'Уважний письменник',
+    description: 'Створіть історію, де кожен розділ має щонайменше 50 слів',
+    icon: '🧘',
+    condition: (stats) => stats.hasBalancedStory,
+    points: 25,
+  },
+  QUICK_LEARNER: {
+    id: 'quick_learner',
+    title: 'Швидкий учень',
+    description: 'Покращіть свій результат на 25% порівняно з першою історією',
+    icon: '🚀',
+    condition: (stats) => stats.improvementRate >= 25,
+    points: 30,
   },
 };
 
 export const achievementsService = {
   calculateStats(stories, analytics) {
-    return {
+    if (!stories || stories.length === 0) {
+      return {
+        totalStories: 0,
+        consecutiveDays: 0,
+        hasDetailedStory: false,
+        emotionalStories: 0,
+        hasBalancedStory: false,
+        improvementRate: 0,
+      };
+    }
+
+    // Розраховуємо базову статистику
+    const stats = {
       totalStories: stories.length,
       consecutiveDays: this.calculateConsecutiveDays(stories),
       hasDetailedStory: this.hasDetailedStory(stories),
       emotionalStories: this.countEmotionalStories(stories),
+      hasBalancedStory: this.hasBalancedStory(stories),
       improvementRate: analytics?.improvementRate || 0,
     };
+
+    return stats;
   },
 
   calculateConsecutiveDays(stories) {
-    if (!stories.length) return 0;
-
-    const dates = stories.map((story) =>
-      new Date(story.timestamp).toDateString()
-    );
-    const uniqueDates = [...new Set(dates)].sort();
+    const dates = stories
+      .map((story) => new Date(story.timestamp || story.savedAt).toDateString())
+      .sort();
+    const uniqueDates = [...new Set(dates)];
 
     let maxStreak = 1;
     let currentStreak = 1;
@@ -88,28 +111,62 @@ export const achievementsService = {
     return maxStreak;
   },
 
+  countWords(text) {
+    return text.trim().split(/\s+/).length;
+  },
+
   hasDetailedStory(stories) {
     return stories.some((story) => {
-      const wordCounts = Object.values(story).map(
-        (text) => text.split(/\s+/).length
+      return Object.values(story).every(
+        (text) => typeof text === 'string' && this.countWords(text) >= 100
       );
-      return wordCounts.every((count) => count >= 100);
+    });
+  },
+
+  hasBalancedStory(stories) {
+    return stories.some((story) => {
+      return Object.values(story).every(
+        (text) => typeof text === 'string' && this.countWords(text) >= 50
+      );
     });
   },
 
   countEmotionalStories(stories) {
-    const emotionalWords = ["відчував", "почувався", "емоції", "настрій"];
-    return stories.filter((story) =>
-      emotionalWords.some((word) =>
-        Object.values(story).some((text) => text.toLowerCase().includes(word))
-      )
-    ).length;
+    const emotionalWords = [
+      'відчув',
+      'почува',
+      'емоці',
+      'настрій',
+      'радість',
+      'сум',
+      'страх',
+      'злість',
+      'щаст',
+      'любов',
+      'ненавис',
+      'тривог',
+      'спокій',
+      'збуджен',
+      'натхнен',
+    ];
+
+    return stories.filter((story) => {
+      const storyText = Object.values(story).join(' ').toLowerCase();
+      return emotionalWords.some((word) => storyText.includes(word));
+    }).length;
   },
 
   getUnlockedAchievements(stats) {
-    return Object.values(ACHIEVEMENTS).filter((achievement) =>
-      achievement.condition(stats)
-    );
+    const unlockedAchievements = [];
+
+    // Перевіряємо кожне досягнення
+    Object.values(ACHIEVEMENTS).forEach((achievement) => {
+      if (achievement.condition(stats)) {
+        unlockedAchievements.push(achievement);
+      }
+    });
+
+    return unlockedAchievements;
   },
 
   calculateTotalPoints(unlockedAchievements) {
@@ -117,58 +174,5 @@ export const achievementsService = {
       (total, achievement) => total + achievement.points,
       0
     );
-  },
-
-  // Додаткові утиліти для роботи з досягненнями
-  getProgress(stats) {
-    const progress = {};
-
-    Object.entries(ACHIEVEMENTS).forEach(([key, achievement]) => {
-      switch (key) {
-        case "STORY_MASTER":
-          progress[key] = (stats.totalStories / 10) * 100;
-          break;
-        case "EMOTION_MASTER":
-          progress[key] = (stats.emotionalStories / 5) * 100;
-          break;
-        case "CONSISTENT_USER":
-          progress[key] = (stats.consecutiveDays / 5) * 100;
-          break;
-        case "IMPROVEMENT_STAR":
-          progress[key] = (stats.improvementRate / 50) * 100;
-          break;
-        default:
-          progress[key] = achievement.condition(stats) ? 100 : 0;
-      }
-    });
-
-    return progress;
-  },
-
-  getUserLevel(points) {
-    const levels = [
-      { name: "Початківець", threshold: 0 },
-      { name: "Дослідник", threshold: 50 },
-      { name: "Знавець", threshold: 100 },
-      { name: "Експерт", threshold: 200 },
-      { name: "Майстер", threshold: 300 },
-    ];
-
-    for (let i = levels.length - 1; i >= 0; i--) {
-      if (points >= levels[i].threshold) {
-        return {
-          ...levels[i],
-          next: levels[i + 1],
-          progress:
-            i < levels.length - 1
-              ? ((points - levels[i].threshold) /
-                  (levels[i + 1].threshold - levels[i].threshold)) *
-                100
-              : 100,
-        };
-      }
-    }
-
-    return levels[0];
   },
 };

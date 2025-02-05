@@ -1,19 +1,17 @@
 // src/hooks/useLocalStorage.js
 import { useState, useEffect, useCallback } from 'react';
-import { storageService } from '../services/storage';
+import { storageService } from '@/services/storage';
 
 const INITIAL_STORY = {
   situation: '',
   task: '',
   action: '',
-  result: ''
+  result: '',
 };
 
 export const useLocalStorage = () => {
   const [story, setStory] = useState(() => {
-    // Спочатку перевіряємо localStorage
-    const savedStory = storageService.getCurrentStory();
-    return savedStory || INITIAL_STORY; // Повертаємо початковий стан, якщо нічого не збережено
+    return storageService.getCurrentStory() || INITIAL_STORY;
   });
 
   const [savedStories, setSavedStories] = useState(() => {
@@ -27,7 +25,7 @@ export const useLocalStorage = () => {
     if (!settings.autoSave) return;
 
     const timer = setInterval(() => {
-      if (Object.values(story).some(value => value !== '')) {
+      if (Object.values(story).some((value) => value.trim() !== '')) {
         storageService.saveCurrentStory(story);
       }
     }, settings.autoSaveInterval || 30000);
@@ -37,7 +35,7 @@ export const useLocalStorage = () => {
 
   // Методи для роботи з поточною історією
   const updateStory = useCallback((updates) => {
-    setStory(prev => {
+    setStory((prev) => {
       const newStory = { ...prev, ...updates };
       storageService.saveCurrentStory(newStory);
       return newStory;
@@ -46,11 +44,28 @@ export const useLocalStorage = () => {
 
   // Методи для роботи зі збереженими історіями
   const saveStory = useCallback(() => {
-    if (Object.values(story).some(value => value !== '')) {
-      storageService.saveStory(story);
+    // Перевіряємо, чи історія не пуста
+    if (Object.values(story).some((value) => value.trim() !== '')) {
+      const timestamp = new Date().toISOString();
+      const newStory = {
+        ...story,
+        id: Date.now().toString(),
+        savedAt: timestamp,
+        timestamp: timestamp, // для сумісності зі старою версією
+      };
+
+      // Зберігаємо історію
+      storageService.saveStory(newStory);
+
+      // Оновлюємо список історій
       setSavedStories(storageService.getAllStories());
-      setStory(INITIAL_STORY); // Очищаємо поточну історію після збереження
+
+      // Очищаємо поточну історію
+      setStory(INITIAL_STORY);
+
+      return true;
     }
+    return false;
   }, [story]);
 
   const deleteStory = useCallback((id) => {
@@ -60,11 +75,20 @@ export const useLocalStorage = () => {
 
   const loadStory = useCallback((id) => {
     const stories = storageService.getAllStories();
-    const storyToLoad = stories.find(s => s.id === id);
+    const storyToLoad = stories.find((s) => s.id === id);
     if (storyToLoad) {
-      setStory(storyToLoad);
-      storageService.saveCurrentStory(storyToLoad);
+      // Видаляємо службові поля перед завантаженням
+      const { id: _, savedAt: __, timestamp: ___, ...cleanStory } = storyToLoad;
+      setStory(cleanStory);
+      storageService.saveCurrentStory(cleanStory);
     }
+  }, []);
+
+  // Функція для перевірки валідності історії
+  const isStoryValid = useCallback((storyToCheck) => {
+    return Object.values(storyToCheck).every(
+      (value) => typeof value === 'string' && value.trim().length > 0
+    );
   }, []);
 
   return {
@@ -74,6 +98,9 @@ export const useLocalStorage = () => {
     saveStory,
     deleteStory,
     loadStory,
-    settings
+    settings,
+    isStoryValid,
   };
 };
+
+export default useLocalStorage;

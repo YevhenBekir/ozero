@@ -1,6 +1,6 @@
 // src/components/SuccessfulMircha.jsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Crown, Save } from 'lucide-react';
 
 // Components
@@ -25,6 +25,7 @@ import { useAiSuggestions } from '@/hooks/useAiSuggestions';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useExport } from '@/hooks/useExport';
+import AchievementNotification from './features/AchievementNotification';
 
 // Field configuration
 const FORM_FIELDS = {
@@ -61,6 +62,7 @@ const SuccessfulMircha = () => {
   const [showStoriesModal, setShowStoriesModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [newAchievement, setNewAchievement] = useState(null);
 
   // Hooks
   const {
@@ -85,6 +87,7 @@ const SuccessfulMircha = () => {
     totalPoints,
     allAchievements,
     progress: achievementsProgress,
+    newAchievement: latestAchievement,
   } = useAchievements(savedStories, patterns);
 
   // AI suggestions
@@ -150,6 +153,22 @@ const SuccessfulMircha = () => {
       setShowExportModal(false);
     },
   });
+
+  // Effect for handling new achievements
+  useEffect(() => {
+    if (latestAchievement && !newAchievement) {
+      setNewAchievement(latestAchievement);
+      // Автоматично закриваємо сповіщення через 5 секунд
+      const timer = setTimeout(() => {
+        setNewAchievement(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [latestAchievement]);
+
+  const handleCloseAchievementNotification = useCallback(() => {
+    setNewAchievement(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -284,6 +303,12 @@ const SuccessfulMircha = () => {
       <Notifications
         notifications={notifications}
         onRemove={removeNotification}
+      />
+
+      {/* Achievement Notification */}
+      <AchievementNotification
+        achievement={newAchievement}
+        onClose={handleCloseAchievementNotification}
       />
     </div>
   );

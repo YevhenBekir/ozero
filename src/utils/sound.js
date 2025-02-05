@@ -1,7 +1,28 @@
 // src/utils/sound.js
-const achievementSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABVgANTU1NTU1Q0NDQ0NDUFBQUFBQXl5eXl5ea2tra2tra3l5eXl5eYaGhoaGhpSUlJSUlKGhoaGhoaGvr6+vr6+8vLy8vLzKysrKysrX19fX19fX5eXl5eXl8vLy8vLy////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQCgAAAAAAAAAVY82AhbwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAALACwAAP/AADwQKVE9YWDGPkQWpT66yk4+zIiYPoTUaT3tnU+NFRUWQKk6G3Wv/+MYxAsLwLo8AAPwATKbY+TZ+cJVK6Riv/xxUln6EFrb//+6w/+CPnCwZvf6K+FW3r8EFaAg+g1EDApnrtjQAN3d/+MYxA8L0FJEAN0YAMZBBCDN/+01/+M5P+v8b//KJP/6YoCjMP+2X82n6yGh0uH+EgRe3CMICsSNvyZ3gAzQyHqA/+MYxB4MoFY8ANN+cB18V708P//ff//8Zv/7c////9ur//1uTv/mf6coj0PUWoVShCXxoQA0TKhkj/+71P63XRQA/+MYxCIAAANIAAAAAKqMFgQwkGxpUTEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+// Короткий звуковий сигнал для досягнення
+const generateAchievementSound = () => {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(587.33, audioContext.currentTime); // D5
+
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.4);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.4);
+};
 
 export const playAchievementSound = () => {
-  achievementSound.currentTime = 0;
-  achievementSound.play().catch(error => console.log('Error playing sound:', error));
+  try {
+    generateAchievementSound();
+  } catch (error) {
+    console.warn('Sound playback failed:', error);
+  }
 };
